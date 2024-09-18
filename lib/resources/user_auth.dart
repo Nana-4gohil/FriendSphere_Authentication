@@ -3,9 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sdp_project/models/user.dart' as model;
 import 'package:sdp_project/resources/storage_method.dart';
+import 'package:local_auth/local_auth.dart';
 class UserAuth {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final LocalAuthentication auth = LocalAuthentication();
 
   // get user details
   Future<Map<String, dynamic>> getUser() async {
@@ -23,6 +25,7 @@ class UserAuth {
     required String email,
     required String password,
     required String username,
+    required String name,
     required String bio,
     required Uint8List file,
   }) async {
@@ -32,6 +35,7 @@ class UserAuth {
           password.isNotEmpty &&
           username.isNotEmpty &&
           bio.isNotEmpty &&
+          name.isNotEmpty &&
           file != null) {
         // registering user in auth with email and password
         UserCredential cred = await _auth.createUserWithEmailAndPassword(
@@ -44,6 +48,7 @@ class UserAuth {
 
         model.User user = model.User(
           username: username,
+          name: name,
           uid: cred.user!.uid,
           photoUrl: photoUrl,
           email: email,
@@ -80,7 +85,15 @@ class UserAuth {
           email: email,
           password: password,
         );
-        res = "success";
+
+        // Perform biometric or lock screen authentication
+        bool authenticated = await _authenticateUser();
+
+        if (authenticated) {
+          res = "success";
+        } else {
+          res = "Authentication failed";
+        }
       } else {
         res = "Please enter all the fields";
       }
@@ -107,6 +120,38 @@ class UserAuth {
     }
     return res;
   }
+
+  Future<bool> _authenticateUser() async {
+    bool authenticated = false;
+    try {
+      // Check if the device can check biometrics and if it supports secure authentication (lock screen)
+      bool canCheckBiometrics = await auth.canCheckBiometrics;
+      bool isDeviceSupported = await auth.isDeviceSupported();
+
+      // Check if there is any secure lock screen (password, PIN, or pattern) enabled
+      bool hasLockScreen = await auth.isDeviceSupported();
+
+      // Proceed if either biometrics or a secure lock screen is available
+      if (canCheckBiometrics || hasLockScreen) {
+        // Try to authenticate (biometric or fallback to lock screen password)
+        authenticated = await auth.authenticate(
+          localizedReason: 'Please authenticate to proceed',
+          options: const AuthenticationOptions(
+            stickyAuth: true,
+            biometricOnly: false, // Allows fallback to lock screen password if biometrics fail
+          ),
+        );
+      } else {
+        // No secure lock screen set up, skip authentication
+        print('No lock screen security is set. Skipping authentication.');
+        return true;
+      }
+    } catch (e) {
+      print('Error during authentication: $e');
+    }
+    return authenticated;
+  }
+
 
   // Logout
   Future<void> logout() async {
