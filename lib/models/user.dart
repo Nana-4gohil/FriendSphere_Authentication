@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class User {
   final String email;
+  final String name;
   final String uid;
   final String? photoUrl;
   final String? username;
@@ -12,6 +13,7 @@ class User {
   const User(
       {required this.username,
         required this.uid,
+        required this.name,
         required this.photoUrl,
         required this.email,
         required this.bio,
@@ -22,6 +24,7 @@ class User {
     var snapshot = snap.data() as Map<String, dynamic>;
 
     return User(
+      name: snapshot["name"],
       username: snapshot["username"],
       uid: snapshot["uid"],
       email: snapshot["email"],
@@ -34,6 +37,7 @@ class User {
 
   Map<String, dynamic> toJson() => {
     "username": username,
+    "name": name,
     "uid": uid,
     "email": email,
     "photoUrl": photoUrl,

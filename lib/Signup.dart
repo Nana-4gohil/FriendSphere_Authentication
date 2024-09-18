@@ -27,6 +27,7 @@ class _SignupPageState extends State<SignupPage> {
 
     // signup user using our authmethodds
     String res = await UserAuth().signUp(
+        name: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,
         username: _usernameController.text,
